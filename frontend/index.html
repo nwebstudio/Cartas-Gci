@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Generador de Cartas - APDAYC / GCI</title>
+<style>
+  :root {
+    --azul: #1a3b6d;
+    --azul-claro: #2c5aa0;
+    --gris: #f4f6f9;
+    --borde: #d7dde5;
+    --exito: #1a8a4a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: var(--gris);
+    margin: 0;
+    padding: 24px;
+    color: #222;
+  }
+  .contenedor {
+    max-width: 720px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    overflow: hidden;
+  }
+  header {
+    background: var(--azul);
+    color: white;
+    padding: 20px 28px;
+  }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 4px 0 0; font-size: 13px; opacity: 0.85; }
+  .cuerpo { padding: 28px; }
+  .seccion {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--borde);
+  }
+  .seccion:last-child { border-bottom: none; }
+  .seccion h2 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--azul-claro);
+    margin: 0 0 14px;
+  }
+  .fila-ruc {
+    display: flex;
+    gap: 10px;
+  }
+  input, select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  input:focus { outline: 2px solid var(--azul-claro); border-color: transparent; }
+  button {
+    background: var(--azul-claro);
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  button:hover { background: var(--azul); }
+  button:disabled { background: #aaa; cursor: not-allowed; }
+  .grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 4px;
+  }
+  .campo { margin-bottom: 12px; }
+  .datos-ruc {
+    background: #eef4ff;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-top: 14px;
+    font-size: 13px;
+    display: none;
+  }
+  .datos-ruc.visible { display: block; }
+  .datos-ruc p { margin: 3px 0; }
+  .aviso-mock {
+    background: #fff3cd;
+    color: #7a5b00;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    margin-top: 10px;
+  }
+  .btn-generar {
+    width: 100%;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    background: var(--exito);
+  }
+  .btn-generar:hover { background: #14703b; }
+  .mensaje {
+    text-align: center;
+    font-size: 13px;
+    margin-top: 10px;
+    min-height: 18px;
+  }
+  .mensaje.error { color: #c0392b; }
+  .mensaje.ok { color: var(--exito); }
+</style>
+</head>
+<body>
+<div class="contenedor">
+  <header>
+    <h1>Generador de Cartas de Requerimiento</h1>
+    <p>APDAYC / GCI Servicios Financieros</p>
+  </header>
+
+  <div class="cuerpo">
+    <div class="seccion">
+      <h2>1. Consulta RUC</h2>
+      <div class="campo">
+        <label>Fecha de la carta</label>
+        <input type="date" id="fecha" />
+      </div>
+      <div class="fila-ruc">
+        <input type="text" id="ruc" placeholder="Escribe el RUC (11 dígitos)" maxlength="11" />
+        <button id="btnBuscar">Buscar</button>
+      </div>
+      <div class="mensaje" id="mensajeRuc"></div>
+
+      <div class="datos-ruc" id="datosRuc">
+        <p><strong>Razón social:</strong> <span id="rs"></span></p>
+        <p><strong>Dirección fiscal:</strong> <span id="df"></span></p>
+        <p><strong>Distrito:</strong> <span id="dd"></span></p>
+        <p><strong>Representante:</strong> <span id="rep"></span></p>
+        <p><strong>Cargo:</strong> <span id="cg"></span></p>
+        <div class="aviso-mock" id="avisoMock" style="display:none;">
+          ⚠️ Estos son datos de PRUEBA. Configura tu token de ApiPeru.dev en el archivo .env para datos reales.
+        </div>
+      </div>
+    </div>
+
+    <div class="seccion">
+      <h2>2. Datos del local (manual)</h2>
+      <div class="campo">
+        <label>Nombre del local</label>
+        <input type="text" id="local" placeholder='Ej: Discoteca El Encuentro' />
+      </div>
+      <div class="grid2">
+        <div class="campo">
+          <label>Dirección del local</label>
+          <input type="text" id="direccion_local" placeholder="Jr./Av. ..." />
+        </div>
+        <div class="campo">
+          <label>Distrito del local</label>
+          <input type="text" id="distrito_local" placeholder="Distrito" />
+        </div>
+      </div>
+    </div>
+
+    <div class="seccion">
+      <h2>3. Deuda</h2>
+      <div class="grid2">
+        <div class="campo">
+          <label>Monto total adeudado (S/.)</label>
+          <input type="number" step="0.01" id="montot" placeholder="0.00" />
+        </div>
+        <div class="campo">
+          <label>Tarifa mensual (S/.)</label>
+          <input type="number" step="0.01" id="monto_mensual" placeholder="0.00" />
+        </div>
+      </div>
+      <div class="campo">
+        <label>Meses que debe</label>
+        <div class="grid2">
+          <div>
+            <label style="font-weight:400; font-size:11px; color:#888;">Desde</label>
+            <input type="month" id="mes_desde" />
+          </div>
+          <div>
+            <label style="font-weight:400; font-size:11px; color:#888;">Hasta</label>
+            <input type="month" id="mes_hasta" />
+          </div>
+        </div>
+        <p id="previewMeses" style="font-size:12px; color:#555; margin-top:6px;"></p>
+      </div>
+    </div>
+
+    <button class="btn-generar" id="btnGenerar">📄 Generar Carta</button>
+    <div class="mensaje" id="mensajeGenerar"></div>
+  </div>
+</div>
+
+<script>
+let datosRucActuales = null;
+
+const $ = (id) => document.getElementById(id);
+
+const MESES_ABREV = ["ENE","FEB","MAR","ABR","MAY","JUN","JUL","AGO","SEP","OCT","NOV","DIC"];
+
+// Convierte "2026-07" -> "JUL 2026"
+function formatearMesAnio(valorMonth) {
+  if (!valorMonth) return "";
+  const [anio, mes] = valorMonth.split("-").map(Number);
+  return `${MESES_ABREV[mes - 1]} ${anio}`;
+}
+
+// Arma el texto final: "JUL 2026 HASTA AGO 2026"
+function construirTextoMeses() {
+  const desde = formatearMesAnio($("mes_desde").value);
+  const hasta = formatearMesAnio($("mes_hasta").value);
+  const texto = desde && hasta ? `${desde} HASTA ${hasta}` : "";
+  $("previewMeses").textContent = texto ? `→ ${texto}` : "";
+  return texto;
+}
+
+$("mes_desde").addEventListener("change", construirTextoMeses);
+$("mes_hasta").addEventListener("change", construirTextoMeses);
+
+// Precarga la fecha de hoy por defecto (el usuario puede cambiarla)
+$("fecha").valueAsDate = new Date();
+
+$("btnBuscar").addEventListener("click", async () => {
+  const ruc = $("ruc").value.trim();
+  const msj = $("mensajeRuc");
+  msj.textContent = "";
+  msj.className = "mensaje";
+
+  if (!/^\d{11}$/.test(ruc)) {
+    msj.textContent = "El RUC debe tener 11 dígitos.";
+    msj.classList.add("error");
+    return;
+  }
+
+  $("btnBuscar").disabled = true;
+  $("btnBuscar").textContent = "Buscando...";
+
+  try {
+    const res = await fetch(`/api/ruc/${ruc}`);
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || "Error al consultar");
+
+    datosRucActuales = data;
+
+    $("rs").textContent = data.razon_social;
+    $("df").textContent = data.direccion_df;
+    $("dd").textContent = data.distrito_df;
+    $("rep").textContent = data.representante || "(no encontrado)";
+    $("cg").textContent = data.cargo || "(no encontrado)";
+    $("datosRuc").classList.add("visible");
+    $("avisoMock").style.display = data._mock ? "block" : "none";
+
+    // Persona natural (RUC 10): el local suele coincidir con el domicilio fiscal.
+    // Se auto-llena como ayuda, pero lo puedes editar si el local es distinto.
+    if (data.es_persona_natural) {
+      $("direccion_local").value = data.direccion_df;
+      $("distrito_local").value = data.distrito_df;
+    }
+
+    msj.textContent = "✅ Datos encontrados" + (data.es_persona_natural ? " (Persona Natural)" : "");
+    msj.classList.add("ok");
+  } catch (err) {
+    msj.textContent = "❌ " + err.message;
+    msj.classList.add("error");
+    $("datosRuc").classList.remove("visible");
+    datosRucActuales = null;
+  } finally {
+    $("btnBuscar").disabled = false;
+    $("btnBuscar").textContent = "Buscar";
+  }
+});
+
+$("btnGenerar").addEventListener("click", async () => {
+  const msj = $("mensajeGenerar");
+  msj.textContent = "";
+  msj.className = "mensaje";
+
+  if (!datosRucActuales) {
+    msj.textContent = "❌ Primero busca el RUC.";
+    msj.classList.add("error");
+    return;
+  }
+
+  const montot = $("montot").value;
+  const monto_mensual = $("monto_mensual").value;
+  const local = $("local").value.trim();
+  const direccion_local = $("direccion_local").value.trim();
+  const distrito_local = $("distrito_local").value.trim();
+  const meses_debe = construirTextoMeses();
+  const fecha = $("fecha").value;
+
+  if (!montot || !monto_mensual || !local || !direccion_local || !distrito_local || !meses_debe || !fecha) {
+    msj.textContent = "❌ Completa todos los campos antes de generar.";
+    msj.classList.add("error");
+    return;
+  }
+
+  $("btnGenerar").disabled = true;
+  $("btnGenerar").textContent = "Generando...";
+
+  try {
+    const res = await fetch("/api/generar-carta", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...datosRucActuales,
+        local, direccion_local, distrito_local,
+        montot, monto_mensual, meses_debe, fecha,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Error al generar la carta");
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Requerimiento_${datosRucActuales.razon_social.replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    msj.textContent = "✅ Carta generada y descargada";
+    msj.classList.add("ok");
+  } catch (err) {
+    msj.textContent = "❌ " + err.message;
+    msj.classList.add("error");
+  } finally {
+    $("btnGenerar").disabled = false;
+    $("btnGenerar").textContent = "📄 Generar Carta";
+  }
+});
+</script>
+</body>
+</html>
