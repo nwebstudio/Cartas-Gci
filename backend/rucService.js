@@ -117,4 +117,56 @@ function construirRespuesta(datosRuc, representantes, esMock, esPersonaNatural =
   };
 }
 
-module.exports = { consultarRuc };
+async function consultarDni(numeroDni) {
+  const token = process.env.APIPERU_TOKEN;
+
+  // Modo de prueba
+  if (!token || token === "TU_TOKEN_AQUI") {
+    console.log("⚠️  Usando datos de PRUEBA (aún no configuraste APIPERU_TOKEN en .env)");
+    return construirRespuestaDni({
+      nombre_completo: "PEREZ GOMEZ JUAN CARLOS (DATO DE PRUEBA)",
+    }, true);
+  }
+
+  try {
+    const resDni = await fetch(`${API_BASE}/dni`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ dni: numeroDni }),
+    });
+    const dataDni = await resDni.json();
+
+    if (!dataDni.success) {
+      throw new Error(dataDni.message || "No se pudo consultar el DNI");
+    }
+
+    return construirRespuestaDni(dataDni.data, false);
+  } catch (err) {
+    console.error("Error consultando DNI:", err.message);
+    throw err;
+  }
+}
+
+// El DNI no trae dirección/distrito (esos siempre van manuales en "Datos del local"),
+// así que aquí solo se arma el nombre. razon_social = representante = el mismo nombre,
+// igual que en RUC 10, y también se marca como persona natural.
+function construirRespuestaDni(datosDni, esMock) {
+  const nombreCompleto = datosDni.nombre_completo || "";
+
+  return {
+    razon_social: nombreCompleto,
+    direccion_df: "",
+    distrito_df: "",
+    representante: nombreCompleto,
+    cargo: "REPRESENTANTE",
+    estado: "",
+    condicion: "",
+    es_persona_natural: true,
+    _mock: esMock,
+  };
+}
+
+module.exports = { consultarRuc, consultarDni };
