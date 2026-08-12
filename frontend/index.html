@@ -175,7 +175,7 @@
         <div class="preview" id="previewFecha"></div>
       </div>
       <div class="fila-ruc">
-        <input type="text" id="ruc" placeholder="Escribe el RUC (11 dígitos)" maxlength="11" inputmode="numeric" />
+        <input type="text" id="ruc" placeholder="RUC (11 dígitos) o DNI (8 dígitos)" maxlength="11" inputmode="numeric" />
         <button id="btnBuscar">Buscar</button>
       </div>
       <div class="mensaje" id="mensajeRuc"></div>
@@ -214,15 +214,15 @@
       <h2>3. Deuda</h2>
       <div class="campo">
         <label>Meses que debe</label>
+        <label style="font-weight:400; font-size:11px; color:#888; margin-top:6px;">Desde</label>
         <div class="grid2">
-          <div>
-            <label style="font-weight:400; font-size:11px; color:#888;">Desde</label>
-            <input type="month" id="mes_desde" />
-          </div>
-          <div>
-            <label style="font-weight:400; font-size:11px; color:#888;">Hasta</label>
-            <input type="month" id="mes_hasta" />
-          </div>
+          <select id="mes_desde_mes" class="select-centrado"></select>
+          <select id="mes_desde_anio" class="select-centrado"></select>
+        </div>
+        <label style="font-weight:400; font-size:11px; color:#888; margin-top:10px;">Hasta</label>
+        <div class="grid2">
+          <select id="mes_hasta_mes" class="select-centrado"></select>
+          <select id="mes_hasta_anio" class="select-centrado"></select>
         </div>
         <p id="previewMeses" style="font-size:12px; color:#555; margin-top:6px;"></p>
       </div>
@@ -305,33 +305,63 @@ function obtenerFechaISO() {
 
 inicializarSelectorFecha();
 
-// --- Meses que debe ---
-function formatearMesAnio(valorMonth) {
-  if (!valorMonth) return "";
-  const [anio, mes] = valorMonth.split("-").map(Number);
-  return `${MESES_ABREV[mes - 1]} ${anio}`;
+// --- Selectores de mes personalizados (Desde / Hasta) ---
+function inicializarSelectoresMes() {
+  const hoy = new Date();
+  const anioActual = hoy.getFullYear();
+
+  ["mes_desde", "mes_hasta"].forEach(prefijo => {
+    const selMes = $(`${prefijo}_mes`);
+    const selAnio = $(`${prefijo}_anio`);
+
+    MESES_LARGO.forEach((m, i) => {
+      const op = document.createElement("option");
+      op.value = i;
+      op.textContent = m;
+      selMes.appendChild(op);
+    });
+
+    for (let a = anioActual - 1; a <= anioActual + 2; a++) {
+      const op = document.createElement("option");
+      op.value = a;
+      op.textContent = a;
+      selAnio.appendChild(op);
+    }
+
+    selMes.value = hoy.getMonth();
+    selAnio.value = anioActual;
+
+    selMes.addEventListener("change", actualizarTodo);
+    selAnio.addEventListener("change", actualizarTodo);
+  });
 }
 
-function contarMeses(valorDesde, valorHasta) {
-  if (!valorDesde || !valorHasta) return 0;
-  const [aD, mD] = valorDesde.split("-").map(Number);
-  const [aH, mH] = valorHasta.split("-").map(Number);
-  const total = (aH - aD) * 12 + (mH - mD) + 1;
+function obtenerMesAnio(prefijo) {
+  return {
+    mes: Number($(`${prefijo}_mes`).value),
+    anio: Number($(`${prefijo}_anio`).value),
+  };
+}
+
+function contarMeses(desde, hasta) {
+  const total = (hasta.anio - desde.anio) * 12 + (hasta.mes - desde.mes) + 1;
   return total > 0 ? total : 0;
 }
 
 function construirTextoMeses() {
-  const desde = formatearMesAnio($("mes_desde").value);
-  const hasta = formatearMesAnio($("mes_hasta").value);
-  const texto = desde && hasta ? `${desde} HASTA ${hasta}` : "";
-  $("previewMeses").textContent = texto ? `→ ${texto}` : "";
+  const desde = obtenerMesAnio("mes_desde");
+  const hasta = obtenerMesAnio("mes_hasta");
+  const texto = `${MESES_ABREV[desde.mes]} ${desde.anio} HASTA ${MESES_ABREV[hasta.mes]} ${hasta.anio}`;
+  $("previewMeses").textContent = `→ ${texto}`;
   return texto;
 }
 
 // --- Cálculo automático del monto total (tarifa × cantidad de meses) ---
 function calcularMontoTotal() {
   const tarifa = parseFloat($("monto_mensual").value);
-  const cantidadMeses = contarMeses($("mes_desde").value, $("mes_hasta").value);
+  const desde = obtenerMesAnio("mes_desde");
+  const hasta = obtenerMesAnio("mes_hasta");
+  const cantidadMeses = contarMeses(desde, hasta);
 
   if (!isNaN(tarifa) && cantidadMeses > 0) {
     $("montot").value = (tarifa * cantidadMeses).toFixed(2);
@@ -343,18 +373,23 @@ function actualizarTodo() {
   calcularMontoTotal();
 }
 
-$("mes_desde").addEventListener("change", actualizarTodo);
-$("mes_hasta").addEventListener("change", actualizarTodo);
+inicializarSelectoresMes();
+actualizarTodo();
 $("monto_mensual").addEventListener("input", calcularMontoTotal);
 
 $("btnBuscar").addEventListener("click", async () => {
-  const ruc = $("ruc").value.trim();
+  const numero = $("ruc").value.trim();
   const msj = $("mensajeRuc");
   msj.textContent = "";
   msj.className = "mensaje";
 
-  if (!/^\d{11}$/.test(ruc)) {
-    msj.textContent = "El RUC debe tener 11 dígitos.";
+  let endpoint;
+  if (/^\d{11}$/.test(numero)) {
+    endpoint = `/api/ruc/${numero}`;
+  } else if (/^\d{8}$/.test(numero)) {
+    endpoint = `/api/dni/${numero}`;
+  } else {
+    msj.textContent = "Escribe un RUC (11 dígitos) o un DNI (8 dígitos).";
     msj.classList.add("error");
     return;
   }
@@ -363,7 +398,7 @@ $("btnBuscar").addEventListener("click", async () => {
   $("btnBuscar").textContent = "Buscando...";
 
   try {
-    const res = await fetch(`/api/ruc/${ruc}`);
+    const res = await fetch(endpoint);
     const data = await res.json();
 
     if (!res.ok) throw new Error(data.error || "Error al consultar");
@@ -371,16 +406,17 @@ $("btnBuscar").addEventListener("click", async () => {
     datosRucActuales = data;
 
     $("rs").textContent = data.razon_social;
-    $("df").textContent = data.direccion_df;
-    $("dd").textContent = data.distrito_df;
+    $("df").textContent = data.direccion_df || "(no aplica, usa la del local)";
+    $("dd").textContent = data.distrito_df || "(no aplica, usa la del local)";
     $("rep").textContent = data.representante || "(no encontrado)";
     $("cg").textContent = data.cargo || "(no encontrado)";
     $("datosRuc").classList.add("visible");
     $("avisoMock").style.display = data._mock ? "block" : "none";
 
     if (data.es_persona_natural) {
-      $("direccion_local").value = data.direccion_df;
-      $("distrito_local").value = data.distrito_df;
+      // Con RUC 10 sí tenemos domicilio fiscal para sugerir; con DNI no hay nada que sugerir.
+      if (data.direccion_df) $("direccion_local").value = data.direccion_df;
+      if (data.distrito_df) $("distrito_local").value = data.distrito_df;
     }
 
     msj.textContent = "✅ Datos encontrados" + (data.es_persona_natural ? " (Persona Natural)" : "");
