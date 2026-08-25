@@ -151,6 +151,27 @@
     margin-top: 10px;
     min-height: 18px;
   }
+  .selector-carta {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .btn-tipo {
+    flex: 1;
+    background: rgba(255,255,255,0.12);
+    border: 1.5px solid rgba(255,255,255,0.35);
+    color: white;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-tipo.activo {
+    background: white;
+    color: var(--azul);
+    border-color: white;
+  }
   .mensaje.error { color: #c0392b; }
   .mensaje.ok { color: var(--exito); }
 </style>
@@ -158,8 +179,12 @@
 <body>
 <div class="contenedor">
   <header>
-    <h1>Generador de Cartas de Requerimiento</h1>
+    <h1>Generador de Cartas</h1>
     <p>APDAYC / GCI Servicios Financieros</p>
+    <div class="selector-carta">
+      <button type="button" class="btn-tipo activo" id="btnTipoRequerimiento" data-tipo="requerimiento">Requerimiento</button>
+      <button type="button" class="btn-tipo" id="btnTipoReiterativa" data-tipo="reiterativa">Reiterativa</button>
+    </div>
   </header>
 
   <div class="cuerpo">
@@ -246,8 +271,19 @@
 
 <script>
 let datosRucActuales = null;
+let tipoCartaActual = "requerimiento";
 
 const $ = (id) => document.getElementById(id);
+
+const NOMBRES_TIPO = { requerimiento: "Requerimiento", reiterativa: "Reiterativa" };
+
+document.querySelectorAll(".btn-tipo").forEach(btn => {
+  btn.addEventListener("click", () => {
+    tipoCartaActual = btn.dataset.tipo;
+    document.querySelectorAll(".btn-tipo").forEach(b => b.classList.remove("activo"));
+    btn.classList.add("activo");
+  });
+});
 
 const MESES_ABREV = ["ENE","FEB","MAR","ABR","MAY","JUN","JUL","AGO","SEP","OCT","NOV","DIC"];
 const MESES_LARGO = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -461,7 +497,7 @@ $("btnGenerar").addEventListener("click", async () => {
   $("btnGenerar").textContent = "Generando...";
 
   try {
-    const res = await fetch("/api/generar-carta", {
+    const res = await fetch(`/api/generar-carta/${tipoCartaActual}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -480,7 +516,7 @@ $("btnGenerar").addEventListener("click", async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Requerimiento_${datosRucActuales.razon_social.replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
+    a.download = `${NOMBRES_TIPO[tipoCartaActual]}_${datosRucActuales.razon_social.replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
     document.body.appendChild(a);
     a.click();
     a.remove();
