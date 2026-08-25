@@ -6,7 +6,7 @@ const fs = require("fs");
 const PizZip = require("pizzip");
 const Docxtemplater = require("docxtemplater");
 
-const { consultarRuc } = require("./rucService");
+const { consultarRuc, consultarDni } = require("./rucService");
 const { montoALetras } = require("./numeroALetras");
 
 const app = express();
@@ -57,9 +57,44 @@ app.get("/api/ruc/:numero", async (req, res) => {
   }
 });
 
-// --- Endpoint: generar carta ---
-app.post("/api/generar-carta", (req, res) => {
+// --- Endpoint: consultar DNI (persona natural sin RUC) ---
+app.get("/api/dni/:numero", async (req, res) => {
+  const { numero } = req.params;
+
+  if (!/^\d{8}$/.test(numero)) {
+    return res.status(400).json({ error: "El DNI debe tener 8 dígitos" });
+  }
+
   try {
+    const datos = await consultarDni(numero);
+    res.json(datos);
+  } catch (err) {
+    res.status(500).json({ error: "No se pudo consultar el DNI. Verifica el número o tu token." });
+  }
+});
+
+// Configuración de cada tipo de carta: qué plantilla usa y el nombre de archivo
+const TIPOS_CARTA = {
+  requerimiento: {
+    plantilla: "REQUERIMIENTO_plantilla.docx",
+    prefijoArchivo: "Requerimiento",
+  },
+  reiterativa: {
+    plantilla: "REITERATIVA_plantilla.docx",
+    prefijoArchivo: "Reiterativa",
+  },
+};
+
+// --- Endpoint: generar carta (requerimiento o reiterativa) ---
+app.post("/api/generar-carta/:tipo", (req, res) => {
+  try {
+    const { tipo } = req.params;
+    const config = TIPOS_CARTA[tipo];
+
+    if (!config) {
+      return res.status(400).json({ error: "Tipo de carta no reconocido." });
+    }
+
     const datos = req.body;
 
     // Fecha: usa la que envía el frontend (input tipo date: YYYY-MM-DD), o la de hoy si no llega
@@ -75,9 +110,6 @@ app.post("/api/generar-carta", (req, res) => {
     }
     const fecha = `${String(fechaBase.dia).padStart(2, "0")} de ${meses[fechaBase.mes]} del ${fechaBase.anio}`;
 
-    // Auto-calcular monto en letras (ya sale en mayúsculas)
-    const montoEscrito = montoALetras(datos.montot);
-
     // Formato moneda con separador de miles: S/1,200.00
     const formatearMonto = (valor) =>
       "S/" + Number(valor).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -85,23 +117,31 @@ app.post("/api/generar-carta", (req, res) => {
     // Convierte a mayúsculas cualquier texto que venga (respeta vacíos)
     const may = (texto) => (texto || "").toString().toUpperCase();
 
+    // Persona natural (RUC 10 o DNI): en el encabezado ("Señores:") se muestra la
+    // dirección/distrito del LOCAL, no la fiscal (la persona puede vivir en
+    // un sitio distinto al lugar donde funciona el negocio).
+    const direccionEncabezado = datos.es_persona_natural ? datos.direccion_local : datos.direccion_df;
+    const distritoEncabezado = datos.es_persona_natural ? datos.distrito_local : datos.distrito_df;
+
     const datosPlantilla = {
       fecha,
       razon_social: may(datos.razon_social),
-      direccion_df: may(datos.direccion_df),
-      distrito_df: may(datos.distrito_df),
+      direccion_df: may(direccionEncabezado),
+      distrito_df: may(distritoEncabezado),
       representante: may(datos.representante),
       cargo: may(datos.cargo),
       local: may(datos.local),
       direccion_local: may(datos.direccion_local),
       distrito_local: may(datos.distrito_local),
       montot: formatearMonto(datos.montot),
-      montot_escrito: montoEscrito,
+      montot_escrito: montoALetras(datos.montot),
       meses_debe: may(datos.meses_debe),
       monto_mensual: formatearMonto(datos.monto_mensual),
+      // Solo la reiterativa usa este campo, pero no hace daño calcularlo siempre
+      monto_mensual_escrito: montoALetras(datos.monto_mensual),
     };
 
-    const templatePath = path.join(__dirname, "..", "templates", "REQUERIMIENTO_plantilla.docx");
+    const templatePath = path.join(__dirname, "..", "templates", config.plantilla);
     const content = fs.readFileSync(templatePath, "binary");
     const zip = new PizZip(content);
     const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
@@ -110,7 +150,7 @@ app.post("/api/generar-carta", (req, res) => {
 
     const buf = doc.getZip().generate({ type: "nodebuffer" });
 
-    const nombreArchivo = `Requerimiento_${(datos.razon_social || "carta").replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
+    const nombreArchivo = `${config.prefijoArchivo}_${(datos.razon_social || "carta").replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
 
     res.setHeader("Content-Disposition", `attachment; filename="${nombreArchivo}"`);
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
