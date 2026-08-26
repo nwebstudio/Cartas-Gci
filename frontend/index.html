@@ -172,6 +172,26 @@
     color: var(--azul);
     border-color: white;
   }
+  .selector-formato {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-formato {
+    flex: 1;
+    background: var(--gris);
+    border: 1.5px solid var(--borde);
+    color: var(--azul);
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-formato.activo {
+    background: var(--azul-claro);
+    color: white;
+    border-color: var(--azul-claro);
+  }
   .mensaje.error { color: #c0392b; }
   .mensaje.ok { color: var(--exito); }
 </style>
@@ -264,6 +284,14 @@
       </div>
     </div>
 
+    <div class="campo">
+      <label>Formato de descarga</label>
+      <div class="selector-formato">
+        <button type="button" class="btn-formato activo" id="btnFormatoWord" data-formato="docx">📝 Word</button>
+        <button type="button" class="btn-formato" id="btnFormatoPdf" data-formato="pdf">📄 PDF</button>
+      </div>
+    </div>
+
     <button class="btn-generar" id="btnGenerar">📄 Generar Carta</button>
     <div class="mensaje" id="mensajeGenerar"></div>
   </div>
@@ -272,6 +300,7 @@
 <script>
 let datosRucActuales = null;
 let tipoCartaActual = "requerimiento";
+let formatoActual = "docx";
 
 const $ = (id) => document.getElementById(id);
 
@@ -281,6 +310,14 @@ document.querySelectorAll(".btn-tipo").forEach(btn => {
   btn.addEventListener("click", () => {
     tipoCartaActual = btn.dataset.tipo;
     document.querySelectorAll(".btn-tipo").forEach(b => b.classList.remove("activo"));
+    btn.classList.add("activo");
+  });
+});
+
+document.querySelectorAll(".btn-formato").forEach(btn => {
+  btn.addEventListener("click", () => {
+    formatoActual = btn.dataset.formato;
+    document.querySelectorAll(".btn-formato").forEach(b => b.classList.remove("activo"));
     btn.classList.add("activo");
   });
 });
@@ -494,7 +531,7 @@ $("btnGenerar").addEventListener("click", async () => {
   }
 
   $("btnGenerar").disabled = true;
-  $("btnGenerar").textContent = "Generando...";
+  $("btnGenerar").textContent = formatoActual === "pdf" ? "Generando PDF (puede tardar)..." : "Generando...";
 
   try {
     const res = await fetch(`/api/generar-carta/${tipoCartaActual}`, {
@@ -504,6 +541,7 @@ $("btnGenerar").addEventListener("click", async () => {
         ...datosRucActuales,
         local, direccion_local, distrito_local,
         montot, monto_mensual, meses_debe, fecha,
+        formato: formatoActual,
       }),
     });
 
@@ -516,7 +554,7 @@ $("btnGenerar").addEventListener("click", async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${NOMBRES_TIPO[tipoCartaActual]}_${datosRucActuales.razon_social.replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
+    a.download = `${NOMBRES_TIPO[tipoCartaActual]}_${datosRucActuales.razon_social.replace(/[^a-zA-Z0-9]/g, "_")}.${formatoActual}`;
     document.body.appendChild(a);
     a.click();
     a.remove();
