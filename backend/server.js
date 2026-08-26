@@ -3,6 +3,11 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
+const os = require("os");
+const crypto = require("crypto");
+const { exec } = require("child_process");
+const util = require("util");
+const execAsync = util.promisify(exec);
 const PizZip = require("pizzip");
 const Docxtemplater = require("docxtemplater");
 
@@ -85,8 +90,35 @@ const TIPOS_CARTA = {
   },
 };
 
-// --- Endpoint: generar carta (requerimiento o reiterativa) ---
-app.post("/api/generar-carta/:tipo", (req, res) => {
+// Convierte un buffer .docx a PDF usando LibreOffice (instalado vía nixpacks.toml).
+// Escribe un archivo temporal, corre la conversión, lee el resultado y limpia todo.
+async function convertirDocxAPdf(bufferDocx) {
+  const idUnico = crypto.randomUUID();
+  const carpetaTemp = os.tmpdir();
+  const rutaDocx = path.join(carpetaTemp, `${idUnico}.docx`);
+  const rutaPdf = path.join(carpetaTemp, `${idUnico}.pdf`);
+
+  try {
+    fs.writeFileSync(rutaDocx, bufferDocx);
+
+    // 60s de margen: en el plan gratis de Render, la primera conversión después
+    // de estar "dormido" puede tardar bastante en arrancar LibreOffice.
+    await execAsync(
+      `soffice --headless --convert-to pdf --outdir "${carpetaTemp}" "${rutaDocx}"`,
+      { timeout: 60000 }
+    );
+
+    const bufferPdf = fs.readFileSync(rutaPdf);
+    return bufferPdf;
+  } finally {
+    // Limpieza: borra los archivos temporales sin importar si algo falló
+    fs.unlink(rutaDocx, () => {});
+    fs.unlink(rutaPdf, () => {});
+  }
+}
+
+// --- Endpoint: generar carta (requerimiento o reiterativa, Word o PDF) ---
+app.post("/api/generar-carta/:tipo", async (req, res) => {
   try {
     const { tipo } = req.params;
     const config = TIPOS_CARTA[tipo];
@@ -96,6 +128,7 @@ app.post("/api/generar-carta/:tipo", (req, res) => {
     }
 
     const datos = req.body;
+    const formato = datos.formato === "pdf" ? "pdf" : "docx";
 
     // Fecha: usa la que envía el frontend (input tipo date: YYYY-MM-DD), o la de hoy si no llega
     // Formato: "07 de Agosto del 2026" (mes con mayúscula inicial, "de"/"del" en minúscula)
@@ -150,14 +183,24 @@ app.post("/api/generar-carta/:tipo", (req, res) => {
 
     const buf = doc.getZip().generate({ type: "nodebuffer" });
 
-    const nombreArchivo = `${config.prefijoArchivo}_${(datos.razon_social || "carta").replace(/[^a-zA-Z0-9]/g, "_")}.docx`;
+    const nombreBase = `${config.prefijoArchivo}_${(datos.razon_social || "carta").replace(/[^a-zA-Z0-9]/g, "_")}`;
 
-    res.setHeader("Content-Disposition", `attachment; filename="${nombreArchivo}"`);
+    if (formato === "pdf") {
+      const bufferPdf = await convertirDocxAPdf(buf);
+      res.setHeader("Content-Disposition", `attachment; filename="${nombreBase}.pdf"`);
+      res.setHeader("Content-Type", "application/pdf");
+      return res.send(bufferPdf);
+    }
+
+    res.setHeader("Content-Disposition", `attachment; filename="${nombreBase}.docx"`);
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
     res.send(buf);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "No se pudo generar la carta: " + err.message });
+    const mensaje = err.message?.includes("timeout") || err.killed
+      ? "La conversión a PDF tardó demasiado (el servidor gratis puede ser lento). Intenta de nuevo, o usa Word."
+      : "No se pudo generar la carta: " + err.message;
+    res.status(500).json({ error: mensaje });
   }
 });
 
