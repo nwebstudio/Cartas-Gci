@@ -347,7 +347,7 @@ function inicializarSelectorFecha() {
   });
 
   const anioActual = hoy.getFullYear();
-  for (let a = anioActual - 1; a <= anioActual + 2; a++) {
+  for (let a = 2018; a <= anioActual + 2; a++) {
     const op = document.createElement("option");
     op.value = a;
     op.textContent = a;
@@ -394,7 +394,7 @@ function inicializarSelectoresMes() {
       selMes.appendChild(op);
     });
 
-    for (let a = anioActual - 1; a <= anioActual + 2; a++) {
+    for (let a = 2018; a <= anioActual + 2; a++) {
       const op = document.createElement("option");
       op.value = a;
       op.textContent = a;
