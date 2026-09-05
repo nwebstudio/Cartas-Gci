@@ -108,6 +108,8 @@ function construirRespuesta(datosRuc, representantes, esMock, esPersonaNatural =
     razon_social: razonSocial,
     direccion_df: direccionFiscal,
     distrito_df: distritoFiscal,
+    provincia: datosRuc.provincia || "",
+    departamento: datosRuc.departamento || "",
     representante,
     cargo,
     estado: datosRuc.estado || "",
