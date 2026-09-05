@@ -16,6 +16,7 @@
     "cors": "^2.8.6",
     "docxtemplater": "^3.69.3",
     "dotenv": "^17.4.2",
+    "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "multer": "^2.2.0",
     "pizzip": "^3.2.0"
