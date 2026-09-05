@@ -194,6 +194,47 @@
   }
   .mensaje.error { color: #c0392b; }
   .mensaje.ok { color: var(--exito); }
+  .oculto { display: none !important; }
+  textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+  }
+  textarea:focus { outline: 2px solid var(--azul-claro); border-color: transparent; }
+  .checks {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 400;
+    color: #333;
+  }
+  .check-item input { width: auto; }
+  .btn-visita {
+    flex: 1;
+    background: var(--gris);
+    border: 1.5px solid var(--borde);
+    color: var(--azul);
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-visita.activo {
+    background: var(--azul-claro);
+    color: white;
+    border-color: var(--azul-claro);
+  }
 </style>
 </head>
 <body>
@@ -204,6 +245,7 @@
     <div class="selector-carta">
       <button type="button" class="btn-tipo activo" id="btnTipoRequerimiento" data-tipo="requerimiento">Requerimiento</button>
       <button type="button" class="btn-tipo" id="btnTipoReiterativa" data-tipo="reiterativa">Reiterativa</button>
+      <button type="button" class="btn-tipo" id="btnTipoInforme" data-tipo="informe">Informe de Gestión</button>
     </div>
   </header>
 
@@ -253,9 +295,19 @@
           <input type="text" id="distrito_local" placeholder="Distrito" />
         </div>
       </div>
+      <div class="grid2 solo-informe">
+        <div class="campo">
+          <label>ID Licencia</label>
+          <input type="text" id="id_licencia" placeholder="Ej: LIC-2026-001" />
+        </div>
+        <div class="campo">
+          <label>Referencia</label>
+          <input type="text" id="referencia" placeholder="Ej: Frente al parque" />
+        </div>
+      </div>
     </div>
 
-    <div class="seccion">
+    <div class="seccion" id="seccionDeuda">
       <h2>3. Deuda</h2>
       <div class="campo">
         <label>Meses que debe</label>
@@ -284,10 +336,88 @@
       </div>
     </div>
 
+    <div class="seccion oculto" id="seccionInforme">
+      <h2>3. Detalle de la Visita</h2>
+
+      <div class="campo">
+        <label>Tipo de visita</label>
+        <div class="selector-formato">
+          <button type="button" class="btn-visita activo" id="btnVisitaInopinada" data-visita="inopinada">Inopinada</button>
+          <button type="button" class="btn-visita" id="btnVisitaRequerimiento" data-visita="requerimiento">Por Requerimiento</button>
+        </div>
+      </div>
+
+      <div class="grid2 oculto" id="camposRequerimiento">
+        <div class="campo">
+          <label>Fecha de requerimiento</label>
+          <input type="text" id="fecha_requerimiento" placeholder="dd/mm/aaaa" />
+        </div>
+        <div class="campo">
+          <label>Requerimiento de</label>
+          <input type="text" id="requerimiento_de" placeholder="Ej: Área Legal APDAYC" />
+        </div>
+      </div>
+
+      <div class="campo">
+        <label>Información solicitada (marca las que apliquen)</label>
+        <div class="grid2">
+          <div class="checks">
+            <label class="check-item"><input type="checkbox" value="datos_usuario" /> Datos del usuario</label>
+            <label class="check-item"><input type="checkbox" value="nombre_interpretes" /> Nombre de intérpretes</label>
+            <label class="check-item"><input type="checkbox" value="precio_entrada" /> Precio de entrada</label>
+            <label class="check-item"><input type="checkbox" value="aforo" /> Aforo</label>
+            <label class="check-item"><input type="checkbox" value="asistencia" /> Asistencia</label>
+            <label class="check-item"><input type="checkbox" value="horario_uso_musica" /> Horario / días de uso de música</label>
+          </div>
+          <div class="checks">
+            <label class="check-item"><input type="checkbox" value="actualizacion_datos" /> Actualización de datos</label>
+            <label class="check-item"><input type="checkbox" value="gestion_cobranza" /> Gestión de cobranza</label>
+            <label class="check-item"><input type="checkbox" value="notificacion" /> Notificación</label>
+            <label class="check-item"><input type="checkbox" value="constatacion_policial" /> Constatación policial</label>
+            <label class="check-item"><input type="checkbox" value="arqueos" /> Arqueos</label>
+            <label class="check-item"><input type="checkbox" value="funcionamiento_local" /> Funcionamiento de local / uso de música</label>
+            <label class="check-item"><input type="checkbox" value="otros" /> Otros</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="campo">
+          <label>Fecha de visita</label>
+          <input type="text" id="fecha_visita" placeholder="dd/mm/aaaa" />
+        </div>
+        <div class="campo">
+          <label>Hora de visita</label>
+          <input type="time" id="hora_visita" />
+        </div>
+      </div>
+
+      <div class="campo">
+        <label>Observaciones</label>
+        <textarea id="observaciones" rows="4" placeholder="Detalle lo observado en la visita..."></textarea>
+      </div>
+
+      <div class="campo">
+        <label>Acciones de mejora (si aplica)</label>
+        <textarea id="acciones_mejora" rows="3" placeholder="Ej: Actualizar datos de contacto..."></textarea>
+      </div>
+
+      <div class="grid2">
+        <div class="campo">
+          <label>Nombre del inspector</label>
+          <input type="text" id="nombre_inspector" placeholder="Nombre completo" />
+        </div>
+        <div class="campo">
+          <label>DNI del inspector</label>
+          <input type="text" id="dni_inspector" placeholder="8 dígitos" />
+        </div>
+      </div>
+    </div>
+
     <div class="campo">
       <label>Formato de descarga</label>
       <div class="selector-formato">
-        <button type="button" class="btn-formato activo" id="btnFormatoWord" data-formato="docx">📝 Word</button>
+        <button type="button" class="btn-formato activo" id="btnFormatoWord" data-formato="docx">📝 <span id="labelFormatoPrincipal">Word</span></button>
         <button type="button" class="btn-formato" id="btnFormatoPdf" data-formato="pdf">📄 PDF</button>
       </div>
     </div>
@@ -304,13 +434,30 @@ let formatoActual = "docx";
 
 const $ = (id) => document.getElementById(id);
 
-const NOMBRES_TIPO = { requerimiento: "Requerimiento", reiterativa: "Reiterativa" };
+const NOMBRES_TIPO = { requerimiento: "Requerimiento", reiterativa: "Reiterativa", informe: "Informe" };
 
 document.querySelectorAll(".btn-tipo").forEach(btn => {
   btn.addEventListener("click", () => {
     tipoCartaActual = btn.dataset.tipo;
     document.querySelectorAll(".btn-tipo").forEach(b => b.classList.remove("activo"));
     btn.classList.add("activo");
+
+    const esInforme = tipoCartaActual === "informe";
+    $("seccionDeuda").classList.toggle("oculto", esInforme);
+    $("seccionInforme").classList.toggle("oculto", !esInforme);
+    document.querySelectorAll(".solo-informe").forEach(el => el.classList.toggle("oculto", !esInforme));
+    $("labelFormatoPrincipal").textContent = esInforme ? "Excel" : "Word";
+  });
+});
+
+// --- Tipo de visita (solo Informe de Gestión) ---
+let tipoVisitaActual = "inopinada";
+document.querySelectorAll(".btn-visita").forEach(btn => {
+  btn.addEventListener("click", () => {
+    tipoVisitaActual = btn.dataset.visita;
+    document.querySelectorAll(".btn-visita").forEach(b => b.classList.remove("activo"));
+    btn.classList.add("activo");
+    $("camposRequerimiento").classList.toggle("oculto", tipoVisitaActual !== "requerimiento");
   });
 });
 
@@ -516,50 +663,90 @@ $("btnGenerar").addEventListener("click", async () => {
     return;
   }
 
-  const montot = $("montot").value;
-  const monto_mensual = $("monto_mensual").value;
   const local = $("local").value.trim();
   const direccion_local = $("direccion_local").value.trim();
   const distrito_local = $("distrito_local").value.trim();
-  const meses_debe = construirTextoMeses();
-  const fecha = obtenerFechaISO();
+  const esInforme = tipoCartaActual === "informe";
 
-  if (!montot || !monto_mensual || !local || !direccion_local || !distrito_local || !meses_debe || !fecha) {
-    msj.textContent = "❌ Completa todos los campos antes de generar.";
-    msj.classList.add("error");
-    return;
+  let endpoint, payload, extension;
+
+  if (esInforme) {
+    const obtener = Array.from(document.querySelectorAll("#seccionInforme input[type=checkbox]:checked")).map(c => c.value);
+    const fecha_visita = $("fecha_visita").value.trim();
+    const nombre_inspector = $("nombre_inspector").value.trim();
+
+    if (!local || !direccion_local || !distrito_local || !fecha_visita || !nombre_inspector) {
+      msj.textContent = "❌ Completa al menos: nombre/dirección/distrito del local, fecha de visita y nombre del inspector.";
+      msj.classList.add("error");
+      return;
+    }
+
+    endpoint = "/api/generar-informe";
+    extension = formatoActual === "pdf" ? "pdf" : "xlsx";
+    payload = {
+      ...datosRucActuales,
+      local, direccion_local, distrito_local,
+      id_licencia: $("id_licencia").value.trim(),
+      referencia: $("referencia").value.trim(),
+      tipo_visita: tipoVisitaActual,
+      fecha_requerimiento: $("fecha_requerimiento").value.trim(),
+      requerimiento_de: $("requerimiento_de").value.trim(),
+      obtener,
+      fecha_visita,
+      hora_visita: $("hora_visita").value,
+      observaciones: $("observaciones").value.trim(),
+      acciones_mejora: $("acciones_mejora").value.trim(),
+      nombre_inspector,
+      dni_inspector: $("dni_inspector").value.trim(),
+      formato: formatoActual === "pdf" ? "pdf" : "xlsx",
+    };
+  } else {
+    const montot = $("montot").value;
+    const monto_mensual = $("monto_mensual").value;
+    const meses_debe = construirTextoMeses();
+    const fecha = obtenerFechaISO();
+
+    if (!montot || !monto_mensual || !local || !direccion_local || !distrito_local || !meses_debe || !fecha) {
+      msj.textContent = "❌ Completa todos los campos antes de generar.";
+      msj.classList.add("error");
+      return;
+    }
+
+    endpoint = `/api/generar-carta/${tipoCartaActual}`;
+    extension = formatoActual;
+    payload = {
+      ...datosRucActuales,
+      local, direccion_local, distrito_local,
+      montot, monto_mensual, meses_debe, fecha,
+      formato: formatoActual,
+    };
   }
 
   $("btnGenerar").disabled = true;
   $("btnGenerar").textContent = formatoActual === "pdf" ? "Generando PDF (puede tardar)..." : "Generando...";
 
   try {
-    const res = await fetch(`/api/generar-carta/${tipoCartaActual}`, {
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...datosRucActuales,
-        local, direccion_local, distrito_local,
-        montot, monto_mensual, meses_debe, fecha,
-        formato: formatoActual,
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
       const err = await res.json();
-      throw new Error(err.error || "Error al generar la carta");
+      throw new Error(err.error || "Error al generar el archivo");
     }
 
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${NOMBRES_TIPO[tipoCartaActual]}_${datosRucActuales.razon_social.replace(/[^a-zA-Z0-9]/g, "_")}.${formatoActual}`;
+    a.download = `${NOMBRES_TIPO[tipoCartaActual]}_${datosRucActuales.razon_social.replace(/[^a-zA-Z0-9]/g, "_")}.${extension}`;
     document.body.appendChild(a);
     a.click();
     a.remove();
 
-    msj.textContent = "✅ Carta generada y descargada";
+    msj.textContent = "✅ Archivo generado y descargado";
     msj.classList.add("ok");
   } catch (err) {
     msj.textContent = "❌ " + err.message;
