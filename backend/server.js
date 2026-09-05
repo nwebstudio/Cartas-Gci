@@ -13,6 +13,7 @@ const Docxtemplater = require("docxtemplater");
 
 const { consultarRuc, consultarDni } = require("./rucService");
 const { montoALetras } = require("./numeroALetras");
+const { generarInformeGestion } = require("./informeService");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -90,21 +91,21 @@ const TIPOS_CARTA = {
   },
 };
 
-// Convierte un buffer .docx a PDF usando LibreOffice (instalado vía nixpacks.toml).
+// Convierte un buffer de Office (.docx o .xlsx) a PDF usando LibreOffice (instalado vía Dockerfile).
 // Escribe un archivo temporal, corre la conversión, lee el resultado y limpia todo.
-async function convertirDocxAPdf(bufferDocx) {
+async function convertirOfficeAPdf(bufferOrigen, extensionOrigen) {
   const idUnico = crypto.randomUUID();
   const carpetaTemp = os.tmpdir();
-  const rutaDocx = path.join(carpetaTemp, `${idUnico}.docx`);
+  const rutaOrigen = path.join(carpetaTemp, `${idUnico}.${extensionOrigen}`);
   const rutaPdf = path.join(carpetaTemp, `${idUnico}.pdf`);
 
   try {
-    fs.writeFileSync(rutaDocx, bufferDocx);
+    fs.writeFileSync(rutaOrigen, bufferOrigen);
 
     // 60s de margen: en el plan gratis de Render, la primera conversión después
     // de estar "dormido" puede tardar bastante en arrancar LibreOffice.
     await execAsync(
-      `soffice --headless --convert-to pdf --outdir "${carpetaTemp}" "${rutaDocx}"`,
+      `soffice --headless --convert-to pdf --outdir "${carpetaTemp}" "${rutaOrigen}"`,
       { timeout: 60000 }
     );
 
@@ -112,7 +113,7 @@ async function convertirDocxAPdf(bufferDocx) {
     return bufferPdf;
   } finally {
     // Limpieza: borra los archivos temporales sin importar si algo falló
-    fs.unlink(rutaDocx, () => {});
+    fs.unlink(rutaOrigen, () => {});
     fs.unlink(rutaPdf, () => {});
   }
 }
@@ -186,7 +187,7 @@ app.post("/api/generar-carta/:tipo", async (req, res) => {
     const nombreBase = `${config.prefijoArchivo}_${(datos.razon_social || "carta").replace(/[^a-zA-Z0-9]/g, "_")}`;
 
     if (formato === "pdf") {
-      const bufferPdf = await convertirDocxAPdf(buf);
+      const bufferPdf = await convertirOfficeAPdf(buf, "docx");
       res.setHeader("Content-Disposition", `attachment; filename="${nombreBase}.pdf"`);
       res.setHeader("Content-Type", "application/pdf");
       return res.send(bufferPdf);
@@ -200,6 +201,34 @@ app.post("/api/generar-carta/:tipo", async (req, res) => {
     const mensaje = err.message?.includes("timeout") || err.killed
       ? "La conversión a PDF tardó demasiado (el servidor gratis puede ser lento). Intenta de nuevo, o usa Word."
       : "No se pudo generar la carta: " + err.message;
+    res.status(500).json({ error: mensaje });
+  }
+});
+
+// --- Endpoint: generar Informe de Gestión (Excel o PDF) ---
+app.post("/api/generar-informe", async (req, res) => {
+  try {
+    const datos = req.body;
+    const formato = datos.formato === "pdf" ? "pdf" : "xlsx";
+
+    const bufferXlsx = await generarInformeGestion(datos);
+    const nombreBase = `Informe_${(datos.razon_social || "gestion").replace(/[^a-zA-Z0-9]/g, "_")}`;
+
+    if (formato === "pdf") {
+      const bufferPdf = await convertirOfficeAPdf(bufferXlsx, "xlsx");
+      res.setHeader("Content-Disposition", `attachment; filename="${nombreBase}.pdf"`);
+      res.setHeader("Content-Type", "application/pdf");
+      return res.send(bufferPdf);
+    }
+
+    res.setHeader("Content-Disposition", `attachment; filename="${nombreBase}.xlsx"`);
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.send(bufferXlsx);
+  } catch (err) {
+    console.error(err);
+    const mensaje = err.message?.includes("timeout") || err.killed
+      ? "La conversión a PDF tardó demasiado (el servidor gratis puede ser lento). Intenta de nuevo, o usa Excel."
+      : "No se pudo generar el informe: " + err.message;
     res.status(500).json({ error: mensaje });
   }
 });
