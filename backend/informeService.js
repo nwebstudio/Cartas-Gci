@@ -87,11 +87,16 @@ async function generarInformeGestion(datos) {
   set(CELDAS.fechaVisita, datos.fecha_visita);
   set(CELDAS.horaVisita, datos.hora_visita);
 
-  // Observaciones (combina celdas para que el texto largo se vea bien, con wrap)
+  // Observaciones: van en las líneas justo debajo de "Detalle de la Gestión"
+  // (antes del label "Observaciones:"), con ajuste de texto.
   if (datos.observaciones) {
-    ws.mergeCells("B41:L43");
-    const celdaObs = ws.getCell("B41");
+    ws.mergeCells("B35:L39");
+    const celdaObs = ws.getCell("B35");
     celdaObs.value = datos.observaciones;
+    // IMPORTANTE: clonar el estilo antes de tocarlo. exceljs puede compartir el
+    // mismo objeto de estilo entre varias celdas; si no se clona, modificar el
+    // alignment aquí corrompe el formato de otras celdas del documento.
+    celdaObs.style = JSON.parse(JSON.stringify(celdaObs.style));
     celdaObs.alignment = { wrapText: true, vertical: "top" };
   }
 
@@ -100,7 +105,14 @@ async function generarInformeGestion(datos) {
     ws.mergeCells("B45:L48");
     const celdaAcc = ws.getCell("B45");
     celdaAcc.value = datos.acciones_mejora;
+    celdaAcc.style = JSON.parse(JSON.stringify(celdaAcc.style));
     celdaAcc.alignment = { wrapText: true, vertical: "top" };
+  }
+
+  // Quita la línea que queda justo encima de la firma de APDAYC (borde inferior de la fila 46)
+  for (let col = 2; col <= 12; col++) {
+    const celda = ws.getRow(46).getCell(col);
+    celda.border = { ...celda.border, bottom: null };
   }
 
   // Inspector
