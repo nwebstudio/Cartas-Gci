@@ -245,6 +245,7 @@
     <div class="selector-carta">
       <button type="button" class="btn-tipo activo" id="btnTipoRequerimiento" data-tipo="requerimiento">Requerimiento</button>
       <button type="button" class="btn-tipo" id="btnTipoReiterativa" data-tipo="reiterativa">Reiterativa</button>
+      <button type="button" class="btn-tipo" id="btnTipoPrejudicial" data-tipo="prejudicial">Pre-Judicial</button>
       <button type="button" class="btn-tipo" id="btnTipoInforme" data-tipo="informe">Informe de Gestión</button>
     </div>
   </header>
@@ -434,7 +435,7 @@ let formatoActual = "docx";
 
 const $ = (id) => document.getElementById(id);
 
-const NOMBRES_TIPO = { requerimiento: "Requerimiento", reiterativa: "Reiterativa", informe: "Informe" };
+const NOMBRES_TIPO = { requerimiento: "Requerimiento", reiterativa: "Reiterativa", prejudicial: "PreJudicial", informe: "Informe" };
 
 document.querySelectorAll(".btn-tipo").forEach(btn => {
   btn.addEventListener("click", () => {
