@@ -89,6 +89,10 @@ const TIPOS_CARTA = {
     plantilla: "REITERATIVA_plantilla.docx",
     prefijoArchivo: "Reiterativa",
   },
+  prejudicial: {
+    plantilla: "PREJ_plantilla.docx",
+    prefijoArchivo: "PreJudicial",
+  },
 };
 
 // Convierte un buffer de Office (.docx o .xlsx) a PDF usando LibreOffice (instalado vía Dockerfile).
